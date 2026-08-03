@@ -1,0 +1,48 @@
+# Version control
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments (Docker uses its own)
+.venv/
+venv/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Render output (mounted as volumes at runtime)
+media/
+output/
+workspace/
+
+# Environment secrets
+.env
+.env.*
+
+# Documentation and tests (not needed in production image)
+# Keep tests for now for smoke testing inside container
+# tests/
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# CI artifacts
+.github/

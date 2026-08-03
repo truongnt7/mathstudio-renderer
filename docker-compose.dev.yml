@@ -1,0 +1,39 @@
+version: "3.9"
+
+# ============================================================
+# mathstudio-renderer — Development Docker Compose override
+# M2-B3.1
+# ============================================================
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Overrides for development:
+#   - Mounts local output/ and workspace/ directories
+#   - Enables text logging
+#   - Lower resource limits
+#   - Interactive mode
+
+services:
+  renderer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./output:/output:rw
+      - ./workspace:/workspace:rw
+      # Mount source for live editing (development only)
+      - ./src:/app/src:ro
+      - ./fixtures:/app/fixtures:ro
+    environment:
+      - RENDERER_LOG_FORMAT=text
+      - RENDERER_LOG_LEVEL=DEBUG
+      - RENDERER_DEFAULT_TIMEOUT=180
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+    # Development: keep container alive for interactive use
+    stdin_open: true
+    tty: true
+    restart: "no"

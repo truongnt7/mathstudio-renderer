@@ -1,0 +1,12 @@
+{
+  "request_version": "1.0.0",
+  "request_id": "viet-smoke-001",
+  "template_code": "VIETNAMESE_TEXT_V1",
+  "template_version": "1.0.0",
+  "quality": "preview",
+  "aspect_ratio": "16:9",
+  "parameters": {},
+  "output": {
+    "formats": ["mp4"]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "request_version": "1.0.0",
+  "request_id": "mathtex-smoke-001",
+  "template_code": "MATHTEX_SMOKE_V1",
+  "template_version": "1.0.0",
+  "quality": "preview",
+  "aspect_ratio": "16:9",
+  "parameters": {},
+  "output": {
+    "formats": ["mp4"]
+  }
+}

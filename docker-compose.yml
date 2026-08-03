@@ -1,0 +1,66 @@
+version: "3.9"
+
+# ============================================================
+# mathstudio-renderer — Production Docker Compose
+# M2-B3.1 hardened runtime
+# ============================================================
+#
+# Security constraints:
+#   read_only: true           — root filesystem read-only
+#   tmpfs /tmp                — writable temp (in-memory, no exec)
+#   no_new_privileges: true   — cannot escalate privileges
+#   user: "1000"              — non-root
+#   no privileged mode        — never
+#   no Docker socket          — never
+#   no host-root mount        — never
+#   no Supabase credentials   — not in this compose file
+#
+# Resource limits:
+#   cpus: 4
+#   memory: 4g
+#   pids_limit: 256
+
+services:
+  renderer:
+    image: mathstudio-renderer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "1000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    volumes:
+      - renderer_output:/output
+      - renderer_workspace:/workspace
+    environment:
+      - RENDERER_OUTPUT_DIR=/output
+      - RENDERER_WORKSPACE_DIR=/workspace
+      - RENDERER_LOG_FORMAT=json
+      - RENDERER_LOG_LEVEL=INFO
+      - RENDERER_DEFAULT_TIMEOUT=120
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4g
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      start_period: 60s
+      retries: 3
+    # No network access needed for render operations
+    # network_mode: none  # Commented out — some Manim deps may need DNS at startup
+    restart: "no"
+
+volumes:
+  renderer_output:
+    driver: local
+  renderer_workspace:
+    driver: local
