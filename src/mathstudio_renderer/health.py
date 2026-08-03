@@ -129,8 +129,13 @@ def run_health_checks(deep: bool = False) -> tuple[bool, list[dict[str, Any]]]:
 
     results = [_check(name, fn) for name, fn in checks]
 
-    # Degrade gracefully: latex/dvisvgm/font are warnings, not hard failures
-    soft_fail_keys = {"latex", "dvisvgm", "font_noto_sans"}
+    # Degrade gracefully: latex/dvisvgm/font/writable-dirs are warnings, not hard failures.
+    # workspace_writable and output_writable depend on runtime volume mounts and are
+    # expected to fail when `health` is called without mounted directories.
+    soft_fail_keys = {
+        "latex", "dvisvgm", "font_noto_sans",
+        "workspace_writable", "output_writable",
+    }
     hard_ok = all(
         r["status"] == "ok"
         for r in results

@@ -81,7 +81,10 @@ def health(
         hard_fails = [
             r
             for r in results
-            if r["status"] != "ok" and r["name"] not in {"latex", "dvisvgm", "font_noto_sans"}
+            if r["status"] != "ok" and r["name"] not in {
+                "latex", "dvisvgm", "font_noto_sans",
+                "workspace_writable", "output_writable",
+            }
         ]
         if hard_fails:
             err_console.print("\n[FAIL] Critical health checks failed.")
@@ -162,7 +165,11 @@ def render(
         float | None, typer.Option("--timeout", help="Override timeout seconds")
     ] = None,
 ) -> None:
-    """Render a fixture file and write artifacts to output/."""
+    """Render a fixture file and write artifacts to output/.
+
+    Events are always written to ``{output_dir}/events.jsonl`` for machine
+    consumption (B3.2 worker integration).
+    """
     if not fixture.exists():
         err_console.print(f"[FAIL] File not found: {fixture}")
         raise typer.Exit(1)

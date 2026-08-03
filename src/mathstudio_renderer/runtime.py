@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Any
 from .artifacts import ArtifactPipeline
 from .config import config
 from .errors import ErrorCode, RenderError
+from .events import EventEmitter
 from .registry import REGISTRY, TemplateRegistryEntry
 from .schemas import ArtifactInfo, RenderPhase, RenderRequest, RenderStatus
 from .subprocess_runner import RenderSubprocessRunner
@@ -48,6 +50,7 @@ class Renderer:
 
     def render(self, request: RenderRequest) -> RenderResult:
         started_at = datetime.now(UTC)
+        started_ns = time.monotonic_ns()
         rid = request.request_id
         current_phase = RenderPhase.RECEIVED
 
@@ -60,18 +63,28 @@ class Renderer:
         workspace_dir = self._ws.create_workspace(rid)
         media_dir = workspace_dir / "manim_media"
 
+        emitter = EventEmitter(output_dir, rid, started_ns)
+        emitter.received()
+
         try:
             # ---- Phase: validating ----
             current_phase = RenderPhase.VALIDATING
+            emitter.validating()
             entry = self._resolve_entry(request)
 
             # ---- Phase: preparing workspace ----
             current_phase = RenderPhase.PREPARING_WORKSPACE
+            emitter.preparing_workspace()
             media_dir.mkdir(parents=True, exist_ok=True)
             scene_file = entry.resolve_scene_file()
 
+            # ---- Phase: building scene ----
+            current_phase = RenderPhase.BUILDING_SCENE
+            emitter.building_scene()
+
             # ---- Phase: rendering ----
             current_phase = RenderPhase.RENDERING
+            emitter.rendering(25)
             logger.info(
                 "Running Manim",
                 extra={
@@ -90,6 +103,7 @@ class Renderer:
 
             # ---- Phase: validating artifacts ----
             current_phase = RenderPhase.VALIDATING_ARTIFACTS
+            emitter.validating_artifacts()
             artifacts = self._artifacts.collect(
                 entry=entry,
                 quality=request.quality,
@@ -100,6 +114,7 @@ class Renderer:
 
             # ---- Phase: writing metadata ----
             current_phase = RenderPhase.WRITING_METADATA
+            emitter.writing_metadata()
             completed_at = datetime.now(UTC)
             elapsed_ms = (completed_at - started_at).total_seconds() * 1000
 
@@ -132,6 +147,7 @@ class Renderer:
             )
 
             current_phase = RenderPhase.COMPLETED
+            emitter.completed(elapsed_ms)
             logger.info(
                 "Render completed",
                 extra={"request_id": rid, "elapsed_ms": round(elapsed_ms, 1)},
@@ -147,15 +163,18 @@ class Renderer:
                 phase=current_phase,
             )
 
-        except RenderError:
+        except RenderError as exc:
+            emitter.failed(str(exc.code), exc.message)
             raise
         except Exception as exc:
             logger.exception("Unexpected error during render", extra={"request_id": rid})
-            raise RenderError(
+            render_err = RenderError(
                 code=ErrorCode.RENDER_INTERNAL_ERROR,
                 message="Internal render error",
                 diagnostics={"exc_type": type(exc).__name__, "exc": str(exc)},
-            ) from exc
+            )
+            emitter.failed(str(render_err.code), render_err.message)
+            raise render_err from exc
         finally:
             try:
                 self._ws.cleanup_workspace(rid)

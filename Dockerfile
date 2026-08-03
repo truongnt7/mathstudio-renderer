@@ -94,12 +94,16 @@ RUN uv sync --no-dev --frozen --no-cache
 RUN chmod +x scripts/*.sh
 
 # ---------------------------------------------------------------------------
-# Non-root user
+# Non-root user — dedicated uid=1000 gid=1000 (B3.2 hardening)
 # ---------------------------------------------------------------------------
-RUN useradd --uid 1000 --gid 0 --no-create-home --shell /bin/bash renderer
+RUN groupadd --gid 1000 renderer \
+    && useradd --uid 1000 --gid 1000 --no-create-home --shell /bin/bash renderer
+
+# fontconfig: pre-warm cache under /tmp so the read-only root FS never blocks
+RUN mkdir -p /tmp/fontconfig-cache && chmod 1777 /tmp/fontconfig-cache
 
 # Create runtime directories owned by renderer
-RUN mkdir -p /output /workspace && chown renderer:root /output /workspace
+RUN mkdir -p /output /workspace && chown renderer:renderer /output /workspace
 RUN chmod 750 /output /workspace
 
 # ---------------------------------------------------------------------------
@@ -112,8 +116,9 @@ ENV RENDERER_WORKSPACE_DIR=/workspace
 ENV RENDERER_LOG_FORMAT=json
 ENV RENDERER_DEFAULT_TIMEOUT=120
 
-# Fonts
+# Fonts — pre-warm cache to avoid read-only-FS warnings at runtime
 ENV FONTCONFIG_PATH=/etc/fonts
+ENV FONTCONFIG_CACHE=/tmp/fontconfig-cache
 ENV MANIMGL_OPENGL_RENDERER=0
 
 # ---------------------------------------------------------------------------
