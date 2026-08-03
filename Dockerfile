@@ -71,17 +71,24 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # ---------------------------------------------------------------------------
 WORKDIR /app
 
-# Copy dependency specification first (layer cache optimization)
+# uv venv configuration
+ENV UV_LINK_MODE=copy
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy dependency specification first for layer cache optimization
 COPY pyproject.toml uv.lock ./
 
-# Install Python runtime dependencies (no dev tools in production)
-ENV UV_SYSTEM_PYTHON=1
-RUN uv sync --no-dev --frozen --no-cache
+# Install dependencies (excluding the project itself) for cache efficiency
+RUN uv sync --no-dev --frozen --no-cache --no-install-project
 
 # Copy application source
 COPY src/ ./src/
 COPY fixtures/ ./fixtures/
 COPY scripts/ ./scripts/
+
+# Install the project package itself into the venv
+RUN uv sync --no-dev --frozen --no-cache
 
 # Make scripts executable
 RUN chmod +x scripts/*.sh
@@ -127,3 +134,5 @@ WORKDIR /app
 
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
 CMD ["health"]
+
+# PATH already includes /app/.venv/bin — python resolves to venv python

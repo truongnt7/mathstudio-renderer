@@ -13,4 +13,5 @@ if [ "${REFRESH_FONTS:-0}" = "1" ]; then
 fi
 
 # Execute the CLI with all provided arguments
+# /app/.venv/bin is on PATH via Dockerfile ENV
 exec python -m mathstudio_renderer "$@"
